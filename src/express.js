@@ -2,6 +2,7 @@ import { InvokeCommand, LambdaClient } from '@aws-sdk/client-lambda'
 import express from 'express'
 import helmet from 'helmet'
 import { corsMiddleware, errorHandlerMiddleware, executionTime, notFoundMiddleware, responseMiddleware } from 't1-expressjs-core'
+import logger from './libs/logger.js'
 
 const app = express()
 
@@ -70,6 +71,27 @@ app.get('/invoke-lambda', async (req, res) => {
     console.error('Error al invocar la Lambda:', error)
     res.status(500).json({ success: false, message: 'Error al invocar la Lambda' })
   }
+})
+
+app.get('/logger', (req, res) => {
+  logger.info('Probando el logger')
+  logger.info('Este es un mensaje de nivel info')
+  logger.debug('Este es un mensaje de nivel debug con datos', {
+    user: 'test-user',
+    action: 'test-logger'
+  })
+  logger.warn('Este es un mensaje de advertencia')
+  logger.error('Este es un mensaje de error simulado')
+
+  // Crear un logger contextual
+  const orderLogger = logger.child({ context: 'orders', orderId: '12345' })
+  orderLogger.info('Procesando orden')
+
+  return res.json({
+    message: 'Logger probado exitosamente',
+    logLevels: ['info', 'debug', 'warn', 'error'],
+    timestamp: new Date().toISOString()
+  })
 })
 
 app.use(notFoundMiddleware)
