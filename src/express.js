@@ -1,3 +1,4 @@
+// src/express.js
 import { InvokeCommand, LambdaClient } from '@aws-sdk/client-lambda'
 import express from 'express'
 import helmet from 'helmet'
@@ -7,7 +8,7 @@ import * as db from './libs/mysql.js'
 
 const app = express()
 
-app.disable('x-powered-by')
+// Express 5.1: Ya no necesita disable x-powered-by (está desactivado por defecto)
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use(helmet())
@@ -15,13 +16,14 @@ app.use(corsMiddleware)
 app.use(executionTime())
 app.use(responseMiddleware)
 
+// Express 5.1: Manejo de promesas mejorado, no requiere next(err) explícito
 app.get('/test', (req, res) => {
   res.sendResponse(200, 'Execution time test successful', { example: 'data' })
 })
 
-// Ruta que genera un error
-app.get('/error', (req, res, next) => {
-  next(new Error('Something went wrong!'))
+// Ruta que genera un error - Express 5.1 ahora atrapa errores en promesas automáticamente
+app.get('/error', async (req, res) => {
+  throw new Error('Something went wrong!')
 })
 
 // Configurar cliente Lambda con AWS SDK v3
@@ -55,6 +57,7 @@ app.get('/invoke-lambda', async (req, res) => {
       body: null, // Para GET no se envía body
       isBase64Encoded: false
     }
+
     const command = new InvokeCommand({
       FunctionName: 't1-quarkus-abandoned', // Cambia por el nombre real de tu Lambda
       InvocationType: 'RequestResponse', // "Event" si no necesitas esperar respuesta
@@ -69,7 +72,7 @@ app.get('/invoke-lambda', async (req, res) => {
       data: responseBody
     })
   } catch (error) {
-    console.error('Error al invocar la Lambda:', error)
+    logger.error({ err: error }, 'Error al invocar la Lambda')
     res.status(500).json({ success: false, message: 'Error al invocar la Lambda' })
   }
 })
@@ -96,44 +99,35 @@ app.get('/logger', (req, res) => {
 })
 
 // Endpoint para probar la conexión a la base de datos
+// Express 5.1: Manejo mejorado de promesas, ya no necesita try/catch explícito si uses errorHandlerMiddleware
 app.get('/mysql', async (req, res) => {
+  // Inicializar el pool
+  await db.initializePool()
+
+  logger.info('Probando conexión a la base de datos')
+
   try {
-    // Inicializar el pool
-    await db.initializePool()
+    // Nota: Esta consulta fallará si la tabla no existe, pero nos sirve para probar
+    // const result = await db.query('SELECT 1 as test FROM DUAL')
+    const result = await db.query('SELECT * FROM orders LIMIT 10')
 
-    logger.info('Probando conexión a la base de datos')
-
-    // Intentar una consulta simple
-    try {
-      // Nota: Esta consulta fallará si la tabla no existe, pero nos sirve para probar
-      // const result = await db.query('SELECT 1 as test FROM DUAL')
-      const result = await db.query('SELECT * FROM orders LIMIT 10')
-
-      return res.json({
-        message: 'Conexión a base de datos exitosa',
-        result,
-        timestamp: new Date().toISOString()
-      })
-    } catch (queryError) {
-      logger.error({ err: queryError }, 'Error al ejecutar consulta de prueba')
-
-      return res.status(500).json({
-        message: 'Error al ejecutar consulta de prueba',
-        error: queryError.message,
-        timestamp: new Date().toISOString()
-      })
-    }
-  } catch (error) {
-    logger.error({ err: error }, 'Error al conectar con la base de datos')
+    return res.json({
+      message: 'Conexión a base de datos exitosa',
+      result,
+      timestamp: new Date().toISOString()
+    })
+  } catch (queryError) {
+    logger.error({ err: queryError }, 'Error al ejecutar consulta de prueba')
 
     return res.status(500).json({
-      message: 'Error al conectar con la base de datos',
-      error: error.message,
+      message: 'Error al ejecutar consulta de prueba',
+      error: queryError.message,
       timestamp: new Date().toISOString()
     })
   }
 })
 
+// Express 5.1: Middleware de manejo de errores y rutas no encontradas
 app.use(notFoundMiddleware)
 app.use(errorHandlerMiddleware)
 
