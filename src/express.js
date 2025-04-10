@@ -3,6 +3,7 @@ import express from 'express'
 import helmet from 'helmet'
 import { corsMiddleware, errorHandlerMiddleware, executionTime, notFoundMiddleware, responseMiddleware } from 't1-expressjs-core'
 import logger from './libs/logger.js'
+import * as db from './libs/mysql.js'
 
 const app = express()
 
@@ -92,6 +93,45 @@ app.get('/logger', (req, res) => {
     logLevels: ['info', 'debug', 'warn', 'error'],
     timestamp: new Date().toISOString()
   })
+})
+
+// Endpoint para probar la conexión a la base de datos
+app.get('/mysql', async (req, res) => {
+  try {
+    // Inicializar el pool
+    await db.initializePool()
+
+    logger.info('Probando conexión a la base de datos')
+
+    // Intentar una consulta simple
+    try {
+      // Nota: Esta consulta fallará si la tabla no existe, pero nos sirve para probar
+      // const result = await db.query('SELECT 1 as test FROM DUAL')
+      const result = await db.query('SELECT * FROM orders LIMIT 10')
+
+      return res.json({
+        message: 'Conexión a base de datos exitosa',
+        result,
+        timestamp: new Date().toISOString()
+      })
+    } catch (queryError) {
+      logger.error({ err: queryError }, 'Error al ejecutar consulta de prueba')
+
+      return res.status(500).json({
+        message: 'Error al ejecutar consulta de prueba',
+        error: queryError.message,
+        timestamp: new Date().toISOString()
+      })
+    }
+  } catch (error) {
+    logger.error({ err: error }, 'Error al conectar con la base de datos')
+
+    return res.status(500).json({
+      message: 'Error al conectar con la base de datos',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    })
+  }
 })
 
 app.use(notFoundMiddleware)

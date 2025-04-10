@@ -5,7 +5,7 @@ import pino from 'pino'
 const loggerOptions = {
   // Configuración base para todos los entornos
   base: {
-    service: process.env.SERVICE_NAME || 'orders-service',
+    service: process.env.SERVICE_NAME || 'service',
     env: process.env.NODE_ENV || 'development',
   },
   // Nivel de log basado en variables de entorno
