@@ -18,7 +18,7 @@
     "@aws-sdk/client-lambda": "^3.782.0",
     "aws-sdk": "^2.1692.0",
     "cors": "^2.8.5",
-    "express": "^4.21.2",
+    "express": "^5.1.0",
     "helmet": "^8.1.0",
     "mysql2": "^3.14.0",
     "pino": "^9.6.0",
