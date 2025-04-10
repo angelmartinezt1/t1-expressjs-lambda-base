@@ -37,6 +37,7 @@
   },
   "files.autoSave": "onFocusChange",
   "files.exclude": {
+    "**/node_modules": true,
     "**/.git": true,
     "**/.DS_Store": true,
     "**/.next": true,
